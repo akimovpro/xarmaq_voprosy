@@ -14,20 +14,24 @@ BOT_TOKEN = "7819954919:AAFW2jWopH1A_YoQgIhMyLWXdQfEAPAbyoo"
 BOT_USERNAME = "anonvoprosy_xarmaq_bot"
 
 # Временное хранилище; для продакшна используйте БД
-refcode_map: dict[str, int] = {}          # код -> id получателя
+user_to_code: dict[int, str] = {}         # user_id -> код
+code_to_user: dict[str, int] = {}         # код -> user_id
 pending_private: dict[int, int] = {}      # отправитель -> получатель
 
 
 def generate_code(length: int = 6) -> str:
-    """Генерирует случайный код длиной length."""
+    """Генерирует уникальный код, который ещё не используется."""
     alphabet = string.ascii_lowercase + string.digits
-    return ''.join(random.choices(alphabet, k=length))
+    while True:
+        code = ''.join(random.choices(alphabet, k=length))
+        if code not in code_to_user:
+            return code
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     Обработчик /start:
-    - Без аргументов: генерирует реферальную ссылку.
+    - Без аргументов: генерирует (или повторно показывает) постоянную реферальную ссылку.
     - С кодом: переходит в режим приёма сообщения для владельца кода.
     """
     user = update.effective_user
@@ -35,10 +39,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if args:
         code = args[0]
-        recipient_id = refcode_map.get(code)
+        recipient_id = code_to_user.get(code)
         if not recipient_id:
             await update.message.reply_text(
-                "Неверная или устаревшая ссылка. Попросите получателя сгенерировать новую."
+                "Неверная или устаревшая ссылка. Попросите получателя создать новую."
             )
             return
         pending_private[user.id] = recipient_id
@@ -47,13 +51,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         )
         return
 
-    # Генерация новой реф-ссылки
-    code = generate_code()
-    refcode_map[code] = user.id
+    # Создаём или повторно показываем постоянную ссылку
+    if user.id not in user_to_code:
+        code = generate_code()
+        user_to_code[user.id] = code
+        code_to_user[code] = user.id
+    else:
+        code = user_to_code[user.id]
+
     link = f"https://t.me/{BOT_USERNAME}?start={code}"
     name = f"@{user.username}" if user.username else user.first_name
     await update.message.reply_text(
-        f"Привет, {name}!\nВаша реферальная ссылка: {link}"
+        f"Привет, {name}!\nВаша постоянная реферальная ссылка: {link}"
     )
 
 
