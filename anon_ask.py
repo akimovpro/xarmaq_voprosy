@@ -60,7 +60,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         code = user_to_code[user.id]
 
     link = f"https://t.me/{BOT_USERNAME}?start={code}"
-    name = f"@{user.username}" if user.username else user.first_name
+    name = f"@{user.username}" if user.username else f"ID: {user.id}"
     await update.message.reply_text(
         f"Привет, {name}!\nВаша постоянная реферальная ссылка: {link}"
     )
@@ -72,7 +72,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     text = update.message.text
     if sender.id in pending_private:
         recipient_id = pending_private.pop(sender.id)
-        sender_name = f"@{sender.username}" if sender.username else sender.first_name
+        sender_name = f"@{sender.username}" if sender.username else f"ID: {sender.id}"
         message_text = (
             f"У вас новое сообщение:\n{text}\n\n(От {sender_name})"
         )
